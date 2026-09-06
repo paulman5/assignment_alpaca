@@ -51,7 +51,7 @@ Your broker client is one interface with two implementations — real sandbox an
 
 ### 3. Settlement worker (the actual assignment)
 
-Consumes order events and drives each order through: `recorded → broker_placed → filled → settled`, calling the mock broker to place, polling for fills, then settling **for real on devnet**: `fulfill_buy_order(order_id, actual_usdc)` closes the order's PDA and emits `BuyOrderFulfilled`; orders that can't fill terminate via `refund_buy_order`. A closed PDA makes any retry fail with Anchor error 3012 `AccountNotInitialized` — that is the on-chain "already settled" signal, and your retry logic must treat it as success, not failure.
+Consumes order events and drives each order through: `recorded → broker_placed → filled → settled`, calling the broker (real sandbox or mock, behind your interface) to place, polling for fills, then settling **for real on devnet**: `fulfill_buy_order(order_id, actual_usdc)` closes the order's PDA and emits `BuyOrderFulfilled`; orders that can't fill terminate via `refund_buy_order`. A closed PDA makes any retry fail with Anchor error 3012 `AccountNotInitialized` — that is the on-chain "already settled" signal, and your retry logic must treat it as success, not failure.
 
 Hard requirements:
 
