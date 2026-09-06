@@ -60,7 +60,7 @@ Hard requirements:
 2. **Crash safety.** `kill -9` your worker at the worst possible moment — after the broker accepted but before you wrote that to the DB — and on restart nothing is trade-duplicated and the order still completes. (Hint: this is what the `client_order_id` recovery lookup exists for.)
 3. **An auditable ledger.** We want to be able to reconstruct the history of every order from the database: what happened, when, in what order. Design the schema; explain it in the README.
 4. **Concurrent workers.** Two instances of the worker running against the same database must not double-process. Any mechanism is fine (row claims with leases, `FOR UPDATE SKIP LOCKED`, advisory locks) — explain your choice.
-5. **Retries with an end state.** Transient failures retry with backoff. After N attempts an order lands in a dead-letter state that a human is alerted about (a log line is fine). One rule is absolute: **an order whose broker trade filled must never be auto-abandoned** — that is a user who paid real money.
+5. **Retries with an end state.** Retry only *transient* failures — HTTP 5xx, timeouts, connection errors, rate limits — with exponential backoff (e.g. 1 s doubling up to 60 s, max ~10 attempts). Permanent rejections (market closed, invalid symbol) are never retried. When retries are exhausted, revert deliberately: first confirm via the `by_client_order_id` lookup that no broker trade actually exists — if none does, call `refund_buy_order` on-chain, mark the order in a terminal failed state, and alert (a log line is fine). If a broker trade **filled**, never revert or abandon it — that is a user who paid real money: dead-letter it loudly for a human.
 6. **Reconciliation.** A job (cron-style or on-demand script) that compares broker state vs. your DB vs. chain state (does the `PendingOrder` PDA still exist?) and repairs drift — e.g., an order the broker filled but your DB thinks is still `broker_placed` because you missed the poll.
 
 ### Scenarios your README must show how to run
@@ -69,7 +69,7 @@ Provide a way (script, seed flag, or manual steps) to demonstrate each:
 
 - **A.** Same event replayed 3× through the pipeline → exactly one broker order, one settlement.
 - **B.** Worker killed between broker-accept and DB write → restart → no duplicate trade, order completes.
-- **C.** Broker returns 500s for 30 s → order completes after, within retry policy.
+- **C.** Broker returns 500s for 30 s → worker retries with backoff and the order completes once the outage ends — no refund, no dead-letter, because the outage ends within the retry policy.
 - **D.** Settlement transaction sent, confirmation response lost (timeout) but the transaction landed → retry hits `AccountNotInitialized` → recorded as settled, no double-send loop, DB converges.
 - **E.** Market closed rejection → `refund_buy_order` on-chain, distinct terminal state, not the DLQ retry loop.
 - **F.** Reconciliation over drifted state → a fill your poller missed is found via the broker, and an order your DB thinks is pending but whose PDA is gone is repaired.
