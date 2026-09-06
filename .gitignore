@@ -1,0 +1,7 @@
+target/
+.anchor/
+node_modules/
+.env
+.env.*
+*.so
+test-ledger/
