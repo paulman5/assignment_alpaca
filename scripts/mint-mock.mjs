@@ -1,4 +1,4 @@
-// Mint mock security tokens (devnet) to your own wallet — the stand-in for what
+// Mint smockAAPL (devnet, 9 decimals) to your own wallet — the stand-in for what
 // production mints to a buyer on fulfillment.
 // Usage: KEYPAIR=devnet-keypair.json npm run mint-mock -- 25
 import { getOrCreateAssociatedTokenAccount, mintTo } from "@solana/spl-token";
@@ -6,7 +6,8 @@ import { Connection, Keypair, PublicKey, clusterApiUrl } from "@solana/web3.js";
 import fs from "fs";
 import os from "os";
 
-const MOCK_MINT = new PublicKey("GfUq1PKXnGnAEvfdMSRQ7LFWzgKQK3nq7pSC3E8UwPPR");
+// smockAAPL — 9 decimals (Alpaca expects 9-decimal amounts on orders)
+const MOCK_MINT = new PublicKey("Do28sRirHZUszT37DxXoRbBrFZtB6Au4eVyQigLyBzwL");
 
 const [amount = "100"] = process.argv.slice(2);
 const rpc = process.env.RPC_URL ?? clusterApiUrl("devnet");
@@ -18,10 +19,10 @@ const authority = Keypair.fromSecretKey(new Uint8Array(JSON.parse(
 
 const connection = new Connection(rpc, "confirmed");
 const ata = await getOrCreateAssociatedTokenAccount(connection, authority, MOCK_MINT, me.publicKey);
-const units = BigInt(Math.round(Number(amount) * 1e6));
+const units = BigInt(Math.round(Number(amount) * 1e9));
 const sig = await mintTo(connection, authority, MOCK_MINT, ata.address, authority, units);
 
-console.log("minted      :", amount, "mock tokens (6 dp)");
+console.log("minted      :", amount, "smockAAPL (9 dp)");
 console.log("to wallet   :", me.publicKey.toBase58());
 console.log("token acct  :", ata.address.toBase58());
 console.log("signature   :", sig);
