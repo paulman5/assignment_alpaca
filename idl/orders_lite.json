@@ -67,6 +67,65 @@
       ]
     },
     {
+      "name": "fulfill_sell_order",
+      "discriminator": [
+        15,
+        43,
+        67,
+        7,
+        137,
+        226,
+        7,
+        122
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "pending_order"
+          ]
+        },
+        {
+          "name": "pending_order",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  114,
+                  100,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "arg",
+                "path": "order_id"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "order_id",
+          "type": "u64"
+        },
+        {
+          "name": "actual_usdc",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "place_buy_order",
       "discriminator": [
         47,
@@ -131,6 +190,70 @@
       ]
     },
     {
+      "name": "place_sell_order",
+      "discriminator": [
+        254,
+        177,
+        180,
+        104,
+        171,
+        194,
+        79,
+        86
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pending_order",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  114,
+                  100,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "arg",
+                "path": "order_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "order_id",
+          "type": "u64"
+        },
+        {
+          "name": "ticker",
+          "type": "string"
+        },
+        {
+          "name": "token_amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "refund_buy_order",
       "discriminator": [
         36,
@@ -141,6 +264,61 @@
         35,
         59,
         142
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "pending_order"
+          ]
+        },
+        {
+          "name": "pending_order",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  114,
+                  100,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "arg",
+                "path": "order_id"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "order_id",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "refund_sell_order",
+      "discriminator": [
+        131,
+        32,
+        245,
+        240,
+        235,
+        193,
+        95,
+        178
       ],
       "accounts": [
         {
@@ -240,6 +418,45 @@
         191,
         122
       ]
+    },
+    {
+      "name": "SellOrderCreated",
+      "discriminator": [
+        24,
+        91,
+        248,
+        209,
+        136,
+        163,
+        239,
+        240
+      ]
+    },
+    {
+      "name": "SellOrderFulfilled",
+      "discriminator": [
+        8,
+        4,
+        10,
+        145,
+        25,
+        223,
+        46,
+        179
+      ]
+    },
+    {
+      "name": "SellOrderRefunded",
+      "discriminator": [
+        68,
+        73,
+        74,
+        120,
+        84,
+        250,
+        38,
+        168
+      ]
     }
   ],
   "errors": [
@@ -252,6 +469,11 @@
       "code": 6001,
       "name": "ZeroAmount",
       "msg": "Order amount must be greater than zero"
+    },
+    {
+      "code": 6002,
+      "name": "WrongOrderSide",
+      "msg": "Instruction side does not match the order's side"
     }
   ],
   "types": [
@@ -316,7 +538,61 @@
       }
     },
     {
+      "name": "OrderSide",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Buy"
+          },
+          {
+            "name": "Sell"
+          }
+        ]
+      }
+    },
+    {
       "name": "PendingOrder",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "order_id",
+            "type": "u64"
+          },
+          {
+            "name": "side",
+            "type": {
+              "defined": {
+                "name": "OrderSide"
+              }
+            }
+          },
+          {
+            "name": "ticker",
+            "type": "string"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SellOrderCreated",
       "type": {
         "kind": "struct",
         "fields": [
@@ -333,16 +609,44 @@
             "type": "string"
           },
           {
-            "name": "usdc_amount",
+            "name": "token_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SellOrderFulfilled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "order_id",
             "type": "u64"
           },
           {
-            "name": "created_at",
-            "type": "i64"
+            "name": "actual_usdc",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SellOrderRefunded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "user",
+            "type": "pubkey"
           },
           {
-            "name": "bump",
-            "type": "u8"
+            "name": "order_id",
+            "type": "u64"
           }
         ]
       }

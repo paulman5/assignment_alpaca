@@ -1,12 +1,13 @@
-// Example: place a buy order on the devnet orders-lite program.
-// Usage: KEYPAIR=~/my-devnet-keypair.json npm run place-order -- AAPL 2500
+// Example: place an order on the devnet orders-lite program.
+// Buy:  KEYPAIR=~/my-devnet-keypair.json npm run place-order -- AAPL 2500
+// Sell: KEYPAIR=~/my-devnet-keypair.json npm run place-order -- NVDA 3 sell
 import anchorPkg from "@coral-xyz/anchor";
 const { AnchorProvider, Program, Wallet, BN } = anchorPkg;
 import { Connection, Keypair, PublicKey, clusterApiUrl } from "@solana/web3.js";
 import fs from "fs";
 import os from "os";
 
-const [ticker = "AAPL", usdc = "2500"] = process.argv.slice(2);
+const [ticker = "AAPL", amount = "2500", side = "buy"] = process.argv.slice(2);
 const rpc = process.env.RPC_URL ?? clusterApiUrl("devnet");
 const keypairPath = (process.env.KEYPAIR ?? os.homedir() + "/.config/solana/id.json");
 const payer = Keypair.fromSecretKey(new Uint8Array(JSON.parse(fs.readFileSync(keypairPath, "utf8"))));
@@ -22,11 +23,14 @@ const [pda] = PublicKey.findProgramAddressSync(
   program.programId
 );
 
-const sig = await program.methods
-  .placeBuyOrder(orderId, ticker, new BN(Math.round(Number(usdc) * 1e6)))
-  .accounts({ user: payer.publicKey })
-  .rpc();
+// both sides use 6 decimals: USDC for buys, token units for sells
+const units = new BN(Math.round(Number(amount) * 1e6));
+const method = side === "sell"
+  ? program.methods.placeSellOrder(orderId, ticker, units)
+  : program.methods.placeBuyOrder(orderId, ticker, units);
+const sig = await method.accounts({ user: payer.publicKey }).rpc();
 
+console.log("side        :", side === "sell" ? "sell" : "buy");
 console.log("user        :", payer.publicKey.toBase58());
 console.log("order_id    :", orderId.toString());
 console.log("pending PDA :", pda.toBase58());

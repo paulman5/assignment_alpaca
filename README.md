@@ -16,7 +16,7 @@ This assignment is a scaled-down version of that pipeline, and its on-chain side
 
 ## Part 1 — Build the pipeline
 
-You are building three small pieces: an **order event listener** on the devnet program, a **mock broker**, and the thing we actually evaluate — the **settlement worker** between them.
+You are building three small pieces: an **order event listener** on the devnet program, a **broker integration** (the real Alpaca sandbox, plus a mock with the same interface for chaos), and the thing we actually evaluate — the **settlement worker** between them.
 
 ### 1. Order event listener (real, on devnet)
 
@@ -24,9 +24,11 @@ The `orders-lite` program (`DB2h5equ9Qp2qaaeKyL9sL6RD8LAhZzjiSUYgnaW3aeF`, devne
 
 Treat delivery as **at-least-once and unordered** — websockets drop, reconnects replay, and your listener must also survive events it has already seen. `order_id` is a per-user counter, so `(user, order_id)` is the business key; the transaction signature is unique per event. Persist raw events as you capture them: several scenarios below are demonstrated by replaying them through your pipeline.
 
-### 2. Mock broker (you implement it, spec below)
+### 2. Broker integration (real Alpaca sandbox + a chaos mock)
 
-A small HTTP service imitating a brokerage:
+Your worker places its trades at the **real Alpaca Broker API sandbox** — credentials, auth, and docs are in the Appendix. This is a core requirement, not a stretch goal: one order must demonstrably travel devnet event → sandbox trade → devnet settlement (scenario G below).
+
+The sandbox can't produce failures on demand, so you also implement a **mock broker** with the same interface, config-switched with the real one; the chaos scenarios run against it:
 
 - `POST /orders` with `{ client_order_id, symbol, notional }` → `202 { broker_order_id, status: "accepted" }`. Fills happen asynchronously a few seconds later.
 - **Same `client_order_id` twice → `409`** with the original order. This is your exactly-once backstop; use it like a real broker's.
@@ -34,7 +36,7 @@ A small HTTP service imitating a brokerage:
 - `GET /orders?client_order_id=...` → lookup for recovery.
 - Chaos, controlled by env flags or a seed: random 500s, slow responses (2–10 s), and a "market closed" rejection.
 
-**The real API your mock mirrors.** In production this role talks to the Alpaca Broker API. Sandbox credentials are in the **Appendix** (sandbox only — never the live environment; keep them out of your submission repo). The endpoints that matter for this pipeline, so you know what your mock is standing in for — and what you can hit for real if you want to:
+The endpoints that matter for this pipeline (your mock mirrors these; sandbox only — never the live environment, and keep credentials out of your submission repo):
 
 | Endpoint | Role in the pipeline |
 |---|---|
@@ -45,7 +47,7 @@ A small HTTP service imitating a brokerage:
 | `GET /v1/events/trades` | SSE stream of fill events (the polling alternative) |
 | `GET /v1/trading/accounts/{account_id}/account` / `.../positions` | Balance & position state for reconciliation |
 
-Keep the mock as the thing your scenarios run against — you can't order a real 500 storm from the sandbox on demand. Wiring your worker so it also runs against the real sandbox (same interface, config-switched) is a strong optional extra.
+Your broker client is one interface with two implementations — real sandbox and mock. That separation is part of what we grade.
 
 ### 3. Settlement worker (the actual assignment)
 
@@ -70,6 +72,7 @@ Provide a way (script, seed flag, or manual steps) to demonstrate each:
 - **D.** Settlement transaction sent, confirmation response lost (timeout) but the transaction landed → retry hits `AccountNotInitialized` → recorded as settled, no double-send loop, DB converges.
 - **E.** Market closed rejection → `refund_buy_order` on-chain, distinct terminal state, not the DLQ retry loop.
 - **F.** Reconciliation over drifted state → a fill your poller missed is found via the broker, and an order your DB thinks is pending but whose PDA is gone is repaired.
+- **G.** One order end-to-end against the **real Alpaca sandbox**: devnet `BuyOrderCreated` → sandbox order placed → fill detected → `fulfill_buy_order` settles on devnet.
 
 ## Part 2 — Written questions
 
@@ -82,19 +85,15 @@ Short answers, a paragraph each. These matter as much as the code.
 5. Solana commitment levels: `processed`, `confirmed`, `finalized`. Which did you use for reacting to order events, and which for considering user money settled — and what does each choice trade away?
 6. What would you change about your design at 100× the order volume? Name the first bottleneck honestly.
 
-## Part 3 — Optional bonus (skip freely)
-
-Only if you have time left inside the box: make the broker side real too. Wire your worker so it can run against the actual Alpaca sandbox (credentials in the Appendix; same interface as your mock, config-switched) and place one real sandbox trade end-to-end. Chaos scenarios still run against the mock — the point is that your broker client is an interface, not a hardcoded dependency.
-
 ## Submission
 
 - Private GitHub repo, invite us; or a zip.
-- README: how to run, how to trigger scenarios A–F, schema rationale, failure-mode table (what fails → what happens → who notices), what you cut, what you'd do with two more weeks.
+- README: how to run, how to trigger scenarios A–G, schema rationale, failure-mode table (what fails → what happens → who notices), what you cut, what you'd do with two more weeks.
 - Rough hours spent (no judgment — it calibrates our review).
 
 ## What we evaluate
 
-Correct idempotency and crash recovery first; the on-chain integration (event handling, retry semantics, commitment levels) and schema/ledger design second; failure handling and observability third; code clarity and tests fourth. A smaller solution that nails A–F beats a bigger one that hand-waves them. The next interview round starts from your code: you'll walk us through it and we'll extend the design together.
+Correct idempotency and crash recovery first; the integrations — devnet program and Alpaca sandbox — (event handling, retry semantics, commitment levels) and schema/ledger design second; failure handling and observability third; code clarity and tests fourth. A smaller solution that nails A–G beats a bigger one that hand-waves them. The next interview round starts from your code: you'll walk us through it and we'll extend the design together.
 
 ## Appendix — what you need to start
 
@@ -118,5 +117,16 @@ curl -X POST 'https://authx.sandbox.alpaca.markets/v1/oauth2/token' \
 ```
 
 These are **sandbox-only** credentials shared for this assignment (no real money anywhere behind them) and will be rotated afterwards. Load them from env in your code and keep them out of your submission repo.
+
+**USDC on devnet (for the off-ramp leg):**
+
+| | |
+|---|---|
+| USDC mint (devnet) | `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU` |
+| Faucet | https://faucet.circle.com/ — select **Solana Devnet**, paste your wallet address |
+| Alpaca off-ramp wallet (owner) | `7YBM7UQitFS9rJR2YEfnXmGEJREfstKfRBjZRRyatqo2` |
+| Approved (whitelisted) USDC deposit ATA | `ADZRYU7F5t4vzhBCihr9faNEYPbGAHYCiC8c3mkZKR2d` |
+
+Get test USDC from the faucet into your devnet wallet. When your pipeline off-ramps order USDC to Alpaca, the whitelisted deposit ATA above is the **only approved destination** — in production the program pins the destination's owner to the off-ramp wallet, so treat any other address as a rejected transfer.
 
 **On-chain (devnet):** [ONCHAIN.md](ONCHAIN.md) has everything — program ID `DB2h5equ9Qp2qaaeKyL9sL6RD8LAhZzjiSUYgnaW3aeF`, the IDL, the `place-order` script, and keypair/airdrop setup.
