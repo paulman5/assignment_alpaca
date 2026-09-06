@@ -3,10 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "place-order": "node scripts/place-order.mjs"
+    "place-order": "node scripts/place-order.mjs",
+    "mint-mock": "node scripts/mint-mock.mjs"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",
+    "@solana/spl-token": "^0.4.9",
     "@solana/web3.js": "^1.95.0"
   }
 }

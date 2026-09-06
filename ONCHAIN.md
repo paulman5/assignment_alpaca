@@ -30,6 +30,26 @@ KEYPAIR=devnet-keypair.json npm run place-order -- AAPL 2500       # buy 2500 US
 KEYPAIR=devnet-keypair.json npm run place-order -- NVDA 3 sell     # sell 3 NVDA tokens
 ```
 
+## Mock token mint
+
+Production mints a real security token to the buyer on fulfillment. To follow that part of the flow, a mock mint is live on devnet:
+
+| | |
+|---|---|
+| Mint address | `GfUq1PKXnGnAEvfdMSRQ7LFWzgKQK3nq7pSC3E8UwPPR` |
+| Decimals | 6 |
+| Mint authority | `keys/mock-mint-authority.json` — shared, **devnet-only, zero value**; it also pays your token-account rent |
+
+Mint yourself test tokens any time:
+
+```bash
+KEYPAIR=devnet-keypair.json npm run mint-mock -- 25   # 25 mock tokens to your wallet
+```
+
+Nothing in the pipeline requires holding these — the orders-lite program moves no tokens — but minting some after a `fulfill_buy_order` (or before a sell) mirrors what production does and makes the flow concrete.
+
+## Events
+
 Events arrive as Anchor's `Program data:` base64 lines in the program logs — `logsSubscribe` (websocket) with mentions on the program ID, decode with the IDL (`scripts/place-order.mjs` shows the client setup; the event coder is `program.coder.events`). Websocket delivery is where your duplicate/reconnect handling becomes real.
 
 Devnet RPC defaults to the public endpoint; set `RPC_URL` if you have your own.

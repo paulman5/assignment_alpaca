@@ -119,4 +119,4 @@ These are **sandbox-only** credentials shared for this assignment (no real money
 
 Get test USDC from the faucet into your devnet wallet. When your pipeline off-ramps order USDC to Alpaca, the whitelisted deposit ATA above is the **only approved destination** — in production the program pins the destination's owner to the off-ramp wallet, so treat any other address as a rejected transfer.
 
-**On-chain (devnet):** [ONCHAIN.md](ONCHAIN.md) has everything — program ID `DB2h5equ9Qp2qaaeKyL9sL6RD8LAhZzjiSUYgnaW3aeF`, the IDL, the `place-order` script, and keypair/airdrop setup.
+**On-chain (devnet):** [ONCHAIN.md](ONCHAIN.md) has everything — program ID `DB2h5equ9Qp2qaaeKyL9sL6RD8LAhZzjiSUYgnaW3aeF`, the IDL, the `place-order` script, and keypair/airdrop setup. There is also a **mock security-token mint** `GfUq1PKXnGnAEvfdMSRQ7LFWzgKQK3nq7pSC3E8UwPPR` (6 decimals) — mint test tokens to yourself with `npm run mint-mock -- <amount>` to mirror what production mints on fulfillment.
