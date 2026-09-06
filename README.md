@@ -14,7 +14,7 @@ This assignment is a scaled-down version of that pipeline, and its on-chain side
 - Stack: **TypeScript + Node.js + Postgres** (we run NestJS + TypeORM, but any framework or none is fine). No message broker — if you need a queue, build it on Postgres.
 - Everything runs locally with `docker compose up` + one or two npm scripts, plus a devnet keypair (`solana-keygen new` + `solana airdrop` — free test SOL, instructions in [ONCHAIN.md](ONCHAIN.md)).
 
-## Part 1 — Build the pipeline
+## Build the pipeline
 
 You are building three small pieces: an **order event listener** on the devnet program, a **broker integration** (the real Alpaca sandbox, plus a mock with the same interface for chaos), and the thing we actually evaluate — the **settlement worker** between them.
 
@@ -74,17 +74,6 @@ Provide a way (script, seed flag, or manual steps) to demonstrate each:
 - **E.** Market closed rejection → `refund_buy_order` on-chain, distinct terminal state, not the DLQ retry loop.
 - **F.** Reconciliation over drifted state → a fill your poller missed is found via the broker, and an order your DB thinks is pending but whose PDA is gone is repaired.
 - **G.** One order end-to-end against the **real Alpaca sandbox**: devnet `BuyOrderCreated` → sandbox order placed → fill detected → `fulfill_buy_order` settles on devnet.
-
-## Part 2 — Written questions
-
-Short answers, a paragraph each. These matter as much as the code.
-
-1. "Exactly-once delivery" is impossible over a network. Where exactly did you place the idempotency boundaries in your design, and what does each one cost?
-2. A buy order: USDC escrowed on-chain, broker trade filled, but the on-chain settlement transaction keeps failing. What do you do in the first minute, the first hour, the first day? Who gets paged and what can they actually do?
-3. Why might a team keep an append-only status ledger *and* a mutable work-queue table for the same orders, instead of one table with a `status` column? What breaks with only the latter?
-4. Our production signer is a hosted key service (the backend never holds the private key; it asks an API to sign, then broadcasts the transaction itself). How do you make "sign, then broadcast" crash-safe so a restart can't broadcast a second, different transaction for the same intent?
-5. Solana commitment levels: `processed`, `confirmed`, `finalized`. Which did you use for reacting to order events, and which for considering user money settled — and what does each choice trade away?
-6. What would you change about your design at 100× the order volume? Name the first bottleneck honestly.
 
 ## Submission
 
