@@ -40,12 +40,13 @@ The endpoints that matter for this pipeline (your mock mirrors these; sandbox on
 
 | Endpoint | Role in the pipeline |
 |---|---|
-| `POST /v1/trading/accounts/{account_id}/orders` | Place the trade (`client_order_id`, `notional` or `qty`; duplicate `client_order_id` → `409`) |
-| `GET /v1/trading/accounts/{account_id}/orders/{order_id}` | Poll order status |
-| `GET /v1/trading/accounts/{account_id}/orders:by_client_order_id?client_order_id=...` | Crash-recovery lookup |
-| `DELETE /v1/trading/accounts/{account_id}/orders/{order_id}` | Cancel before fill |
-| `GET /v1/events/trades` | SSE stream of fill events (the polling alternative) |
-| `GET /v1/trading/accounts/{account_id}/account` / `.../positions` | Balance & position state for reconciliation |
+| `POST https://broker-api.sandbox.alpaca.markets/v1/trading/accounts/{account_id}/orders` | Place the trade (`client_order_id`, `notional` or `qty`; duplicate `client_order_id` → `409`) |
+| `GET https://broker-api.sandbox.alpaca.markets/v1/trading/accounts/{account_id}/orders/{order_id}` | Poll order status |
+| `GET https://broker-api.sandbox.alpaca.markets/v1/trading/accounts/{account_id}/orders:by_client_order_id?client_order_id={client_order_id}` | Crash-recovery lookup |
+| `DELETE https://broker-api.sandbox.alpaca.markets/v1/trading/accounts/{account_id}/orders/{order_id}` | Cancel before fill |
+| `GET https://broker-api.sandbox.alpaca.markets/v1/events/trades` | SSE stream of fill events (the polling alternative) |
+| `GET https://broker-api.sandbox.alpaca.markets/v1/trading/accounts/{account_id}/account` | Account balance state for reconciliation |
+| `GET https://broker-api.sandbox.alpaca.markets/v1/trading/accounts/{account_id}/positions` | Open positions for reconciliation |
 
 Your broker client is one interface with two implementations — real sandbox and mock. That separation is part of what we grade.
 
