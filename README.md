@@ -10,7 +10,7 @@ This assignment is a scaled-down version of that pipeline, and its on-chain side
 
 ## Ground rules
 
-- **Time box: ~8 focused hours**, spread over up to one week. We are not looking for a finished product; we are looking at what you prioritize when you can't build everything. Cut scope deliberately and write down what you cut and why.
+- **Deadline: one week** from receiving access.
 - Stack: **TypeScript + Node.js + Postgres** (we run NestJS + TypeORM, but any framework or none is fine). No message broker — if you need a queue, build it on Postgres.
 - Everything runs locally with `docker compose up` + one or two npm scripts, plus a devnet keypair (`solana-keygen new` + `solana airdrop` — free test SOL, instructions in [ONCHAIN.md](ONCHAIN.md)).
 
