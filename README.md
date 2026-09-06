@@ -16,7 +16,7 @@ This assignment is a scaled-down version of that pipeline, and its on-chain side
 
 ## Build the pipeline
 
-You are building three small pieces: an **order event listener** on the devnet program, a **broker integration** (the real Alpaca sandbox, plus a mock with the same interface for chaos), and the thing we actually evaluate — the **settlement worker** between them.
+You are building three small pieces: an **order event listener** on the devnet program, a **broker integration** (the real Alpaca sandbox, plus a mock with the same interface for failure testing), and the thing we actually evaluate — the **settlement worker** between them.
 
 ### 1. Order event listener (real, on devnet)
 
@@ -24,17 +24,17 @@ The `orders-lite` program (`DB2h5equ9Qp2qaaeKyL9sL6RD8LAhZzjiSUYgnaW3aeF`, devne
 
 Treat delivery as **at-least-once and unordered** — websockets drop, reconnects replay, and your listener must also survive events it has already seen. `order_id` is a per-user counter, so `(user, order_id)` is the business key; the transaction signature is unique per event. Persist raw events as you capture them: several scenarios below are demonstrated by replaying them through your pipeline.
 
-### 2. Broker integration (real Alpaca sandbox + a chaos mock)
+### 2. Broker integration
 
 Your worker places its trades at the **real Alpaca Broker API sandbox** — credentials, auth, and docs are in the Appendix. This is a core requirement, not a stretch goal: one order must demonstrably travel devnet event → sandbox trade → devnet settlement (scenario G below).
 
-The sandbox can't produce failures on demand, so you also implement a **mock broker** with the same interface, config-switched with the real one; the chaos scenarios run against it:
+The sandbox can't produce failures on demand, so you also implement a **mock broker** with the same interface, config-switched with the real one; the failure scenarios run against it:
 
 - `POST /orders` with `{ client_order_id, symbol, notional }` → `202 { broker_order_id, status: "accepted" }`. Fills happen asynchronously a few seconds later.
 - **Same `client_order_id` twice → `409`** with the original order. This is your exactly-once backstop; use it like a real broker's.
 - `GET /orders/:broker_order_id` → current status (`accepted | filled | rejected`).
 - `GET /orders?client_order_id=...` → lookup for recovery.
-- Chaos, controlled by env flags or a seed: random 500s, slow responses (2–10 s), and a "market closed" rejection.
+- Simulated failures, controlled by env flags or a seed: random 500s, slow responses (2–10 s), and a "market closed" rejection.
 
 The endpoints that matter for this pipeline (your mock mirrors these; sandbox only — never the live environment, and keep credentials out of your submission repo):
 
