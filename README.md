@@ -1,4 +1,4 @@
-# Spout Backend Technical Assignment — "settlement-lite"
+# Spout Backend Technical Assignment 
 
 ## Context
 
